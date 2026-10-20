@@ -34,6 +34,7 @@ after(function (done) {
 })
 
 require('./app')
+require('./layout_disclosure')
 require('./async_helpers')
 require('./async_helper_escape')
 require('./register_partials')

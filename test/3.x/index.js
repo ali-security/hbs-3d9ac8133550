@@ -34,6 +34,7 @@ after(function (done) {
 })
 
 require('./app')
+require('./layout_disclosure')
 require('./async_helpers')
 require('./view_engine')
 require('./no_layout_app')
