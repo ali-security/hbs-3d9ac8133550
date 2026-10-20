@@ -1,8 +1,12 @@
 name: ci
 
 on:
-- pull_request
-- push
+  workflow_dispatch:
+    inputs:
+      test-filter:
+        description: Mocha --grep pattern to run a subset of tests (empty runs the full suite)
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -13,6 +17,7 @@ jobs:
       checks: write  # for coverallsapp/github-action to create new checks
       contents: read  # for actions/checkout to fetch code
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -221,7 +226,9 @@ jobs:
     - name: Run tests
       shell: bash
       run: |
-        if npm -ps ls nyc | grep -q nyc; then
+        if [ -n "${{ inputs.test-filter }}" ]; then
+          npm test -- --grep "${{ inputs.test-filter }}"
+        elif npm -ps ls nyc | grep -q nyc; then
           npm run test-ci
         else
           npm test
@@ -231,22 +238,14 @@ jobs:
       if: steps.list_env.outputs.eslint != ''
       run: npm run lint
 
-    - name: Collect code coverage
-      uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
-      if: steps.list_env.outputs.nyc != ''
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        flag-name: run-${{ matrix.test_number }}
-        parallel: true
+    - name: Pack npm package
+      if: matrix.node-version == '24'
+      run: npm pack
 
-  coverage:
-    permissions:
-      checks: write  # for coverallsapp/github-action to create new checks
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-    - name: Uploade code coverage
-      uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+    - name: Upload npm package
+      if: matrix.node-version == '24'
+      uses: actions/upload-artifact@v4
       with:
-        github-token: ${{ secrets.github_token }}
-        parallel-finished: true
+        name: hbs-tgz
+        path: hbs-*.tgz
+        if-no-files-found: error
